@@ -1,0 +1,478 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HDFC Bank MyCards</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            background-color: #f5f5f5;
+        }
+        .header {
+            background-color: #003087;
+            color: white;
+            text-align: center;
+            padding: 20px;
+        }
+        .header img.logo {
+            height: 40px;
+            vertical-align: middle;
+        }
+        .header p {
+            margin: 10px 0;
+            font-size: 16px;
+        }
+        .header img.carousel {
+            width: 80%;
+            max-width: 300px;
+            height: auto;
+            margin-top: 10px;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        h1, h2 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        p {
+            color: #666;
+            margin-bottom: 20px;
+        }
+        .tabs {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 20px;
+        }
+        .tab {
+            padding: 10px;
+            cursor: pointer;
+            color: #666;
+            font-size: 14px;
+        }
+        .tab.active {
+            color: #003087;
+            border-bottom: 2px solid #003087;
+        }
+        .card {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .card img {
+            width: 50px;
+            height: 50px;
+            margin-right: 15px;
+            background-color: #f0f0f0;
+        }
+        .card-details {
+            flex-grow: 1;
+        }
+        .card-details p {
+            margin: 0;
+            font-size: 14px;
+        }
+        .card-details .card-number {
+            font-weight: bold;
+            margin: 5px 0;
+        }
+        .card-details .status {
+            color: red;
+            font-size: 12px;
+        }
+        .add-card-btn {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 15px;
+            background-color: #e6f0ff;
+            border: 1px solid #003087;
+            border-radius: 5px;
+            color: #003087;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .add-card-btn img {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+        }
+        /* OTP Login Styles */
+        .login-section, .otp-section {
+            text-align: center;
+        }
+        .login-section h2, .otp-section h2 {
+            font-size: 20px;
+            margin-bottom: 20px;
+        }
+        .login-section input, .otp-section input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        .login-section button, .otp-section button {
+            width: 100%;
+            padding: 15px;
+            background-color: #4a6a9b;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .login-section button:hover, .otp-section button:hover {
+            background-color: #3b5480;
+        }
+        .footer {
+            text-align: center;
+            padding: 20px;
+            font-size: 12px;
+            color: #003087;
+        }
+        .footer a {
+            color: #003087;
+            text-decoration: none;
+            margin: 0 5px;
+        }
+        /* Dashboard Styles (Integrated Below Card) */
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .dashboard-header select {
+            padding: 5px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+        .points {
+            color: #f5a623;
+            font-size: 14px;
+        }
+        .limit {
+            font-size: 14px;
+        }
+        .summary {
+            display: flex;
+            justify-content: space-between;
+            padding: 15px;
+            background-color: #e6f0ff;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .summary div {
+            text-align: center;
+        }
+        .summary .highlight {
+            background-color: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+        .summary button {
+            background-color: #003087;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .manage-card h2 {
+            font-size: 18px;
+            margin-bottom: 15px;
+        }
+        .options {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .option {
+            flex: 1 1 40%;
+            text-align: center;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            cursor: pointer;
+            position: relative;
+        }
+        .option img {
+            width: 30px;
+            height: 30px;
+            margin-bottom: 5px;
+        }
+        .option.new::before {
+            content: 'NEW';
+            background-color: #003087;
+            color: white;
+            font-size: 10px;
+            padding: 2px 5px;
+            border-radius: 3px;
+            position: absolute;
+            top: 5px;
+            left: 5px;
+        }
+        .banner {
+            background-color: #e6f0ff;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .banner button {
+            background-color: #d32f2f;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        .shortcut {
+            background-color: white;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <img src="https://drbnrg5fviq0l.cloudfront.net/mycards/images/mycards_logo.svg" alt="MyCards Logo" class="logo">
+        <p>One stop to manage your HDFC Bank Credit Card, Debit Card, Fastag, Prepaid Cards and Consumer Loans</p>
+        <img src="https://drbnrg5fviq0l.cloudfront.net/mycards/images/auth_carousel_1.svg" alt="Carousel Image" class="carousel">
+    </div>
+
+    <!-- Login Section -->
+    <div id="login-section" class="container login-section">
+        <h2>Let's get started</h2>
+        <input type="text" id="mobile-number" placeholder="Registered Mobile Number">
+        <p>We will send you an OTP on this mobile number</p>
+        <button onclick="requestOTP()">GET OTP</button>
+    </div>
+
+    <!-- OTP Verification Section -->
+    <div id="otp-section" class="container otp-section hidden">
+        <h2>Enter OTP</h2>
+        <input type="text" id="otp-input" placeholder="Enter OTP">
+        <button onclick="verifyOTP()">VERIFY OTP</button>
+    </div>
+
+    <!-- Card Management Section with Integrated Dashboard -->
+    <div id="card-management" class="container hidden">
+        <h1>MANAGE HDFC BANK CARDS</h1>
+        <p>Add or Select a card to MyCards</p>
+        <div class="tabs">
+            <div class="tab active">Credit</div>
+            <div class="tab">Debit</div>
+            <div class="tab">FASTag</div>
+            <div class="tab">Prepaid Card</div>
+            <div class="tab">Consumer</div>
+        </div>
+        <div class="card">
+            <img src="https://via.placeholder.com/50x50?text=Card" alt="Card Image">
+            <div class="card-details">
+                <p>Paytm HDFC Bank Cred...</p>
+                <p class="card-number">XXXX 0444</p>
+                <p class="status">Credit card is blocked</p>
+            </div>
+            <img src="https://via.placeholder.com/20x20?text=Arrow" alt="Arrow">
+        </div>
+
+        <!-- Integrated Dashboard Content -->
+        <div class="dashboard-header">
+            <div>
+                <h1>Hi Keval</h1>
+                <p>Welcome Back!</p>
+                <p class="points">0 Pts</p>
+            </div>
+            <div>
+                <select>
+                    <option>Select Products</option>
+                    <option>Paytm HDFC Bank Credit Card</option>
+                </select>
+                <p class="limit">₹ 0.00</p>
+            </div>
+        </div>
+        <p class="status">Credit card is blocked</p>
+        <div class="summary">
+            <div class="highlight">
+                <p>Upcoming Payment</p>
+                <p>₹ 1,46,569.66</p>
+                <button>PAY NOW</button>
+            </div>
+            <div>
+                <p>Card Summary</p>
+                <p>Total Outstanding</p>
+                <p>₹ 0.00</p>
+            </div>
+            <div>
+                <p>Unbilled Amount</p>
+                <p>₹ 0.00</p>
+            </div>
+        </div>
+        <div class="manage-card">
+            <h2>Manage Card</h2>
+            <div class="options">
+                <div class="option">
+                    <img src="https://static-00.iconduck.com/assets.00/credit-card-icon-256x196-41bhcltz.png" alt="Card Control">
+                    <p>Card Control</p>
+                </div>
+                <div class="option">
+                    <img src="https://static-00.iconduck.com/assets.00/statement-icon-204x256-rqebs3jr.png" alt="Statement">
+                    <p>Request Statement</p>
+                </div>
+                <div class="option">
+                    <img src="https://static-00.iconduck.com/assets.00/calculator-icon-234x256-zgc6qok1.png"" alt="EMI">
+                    <p>Linked EMIs</p>
+                </div>
+                <div class="option">
+                    <img src="https://static-00.iconduck.com/assets.00/transaction-minus-icon-222x256-22p5d8wk.png" alt="Transactions">
+                    <p>Transactions</p>
+                </div>
+                <div class="option new">
+                    <img src="https://static-00.iconduck.com/assets.00/service-task-icon-256x211-61o319zx.png" alt="Services">
+                    <p>Services</p>
+                </div>
+                <div class="option">
+                    <img src="https://static-00.iconduck.com/assets.00/credit-card-debit-icon-256x204-d2x18y9m.png" alt="Block">
+                    <p>Block Card</p>
+                </div>
+                <div class="option">
+                    <img src="https://static-00.iconduck.com/assets.00/shop-icon-256x236-uwirk8gj.png" alt="Shop">
+                    <p>Shop/Redeem</p>
+                </div>
+                <div class="option">
+                    <img src="https://static-00.iconduck.com/assets.00/calculator-icon-234x256-vu2mzk7l.png" alt="Savings">
+                    <p>Savings Calculator</p>
+                </div>
+            </div>
+        </div>
+        <div class="banner">
+            <p>Say hello to hassle free protection with HDFC Life Group Term Purasurance A non-linked non...</p>
+            <button>AVAIL NOW</button>
+        </div>
+        <div class="shortcut">
+            <p>Add MyCards icon to homescreen for quick access</p>
+        </div>
+
+        <div class="add-card-btn">
+            <div style="display: flex; align-items: center;">
+                <img src="https://via.placeholder.com/20x20?text=Card" alt="Card Icon">
+                <span>Add Credit Card</span>
+            </div>
+            <img src="https://via.placeholder.com/20x20?text=Arrow" alt="Arrow">
+        </div>
+    </div>
+
+    <div class="footer">
+        <a href="#">Cookie Policy</a> • <a href="#">Terms & Conditions</a> • <a href="#">Privacy Policy</a>
+        <p>Copyright © 2025 HDFC Bank Ltd.</p>
+    </div>
+
+    <script>
+        const loginSection = document.getElementById('login-section');
+        const otpSection = document.getElementById('otp-section');
+        const cardManagement = document.getElementById('card-management');
+        const mobileNumberInput = document.getElementById('mobile-number');
+        const otpInput = document.getElementById('otp-input');
+
+        function requestOTP() {
+            const mobileNumber = mobileNumberInput.value;
+            if (mobileNumber.length === 10 && /^\d+$/.test(mobileNumber)) {
+                console.log('Requesting OTP for: ' + mobileNumber);
+                loginSection.classList.add('hidden');
+                otpSection.classList.remove('hidden');
+            } else {
+                alert('Please enter a valid 10-digit mobile number');
+            }
+        }
+
+        function verifyOTP() {
+            const otp = otpInput.value;
+            if (otp.length === 6 && /^\d+$/.test(otp)) {
+                console.log('OTP verification successful: ' + otp);
+                otpSection.classList.add('hidden');
+                cardManagement.classList.remove('hidden');
+                // Force a re-render check
+                cardManagement.style.display = 'block';
+                console.log('Card Management section should now be visible');
+            } else {
+                alert('Please enter a valid 6-digit OTP');
+            }
+        }
+
+        const tabs = document.querySelectorAll('.tab');
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+            });
+        });
+
+        // Debugging on page load
+        window.onload = function() {
+            console.log('Page loaded. Initial visibility - Login:', !loginSection.classList.contains('hidden'), 'OTP:', !otpSection.classList.contains('hidden'), 'Card Management:', !cardManagement.classList.contains('hidden'));
+        };
+    </script>
+</body>
+</html>
